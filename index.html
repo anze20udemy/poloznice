@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
@@ -11,7 +12,11 @@
     <script src="js/jquery.mobile-1.4.5.js"></script>
     <script src="js/FileSaver.js"></script>
 
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+
     <script src="js/script.js"></script>
+
+
 
 
 
@@ -27,27 +32,44 @@
     </header>
     <div data-role="navbar">
         <ul>
-            <li><a href="#home" data-transition="none" data-icon="home" >Domov</a></li>
 
             <li><a href="#addBill" data-transition="none" data-icon="plus" >Dodaj</a></li>
+            <li><a href="#addQR" data-transition="none" data-icon="plus" >QR</a></li>
 
         </ul>
     </div>
 
     <div role="main" class="ui-content">
         <h3>Pregled neplačanih računov</h3>
-        <p>S pomočjo Punch It aplikacije lahko spremljate prihode in odhode z dela.</p>
+        <p>Z aplikacijo lahko spremljate seznam računov.</p>
 
         <p>Uvoz txt datoteke.</p>
 
         <input type="file">
         <button id="importQR">Uvozi QR</button>
 
-        <h3>Pregled vpisov in izpisov</h3>
+        <div id="allBills">
+            <h3>Vsi računi</h3>
+            <div class="filterContainer">
+                <input class="ui-filterable" name="filterBills" type="text" id="filterBills" placeholder="Izberi prejemnika...">
+            </div>
+            <br>
 
 
-        <ul id="stats" data-role="listview"  data-filter="true" data-filter-placeholder="Filtriraj po vseh poljih." data-inset="true" ></ul>
-        <br>
+            <!--<ul id="stats" data-role="listview"  data-filter="true" data-filter-placeholder="Filtriraj po vseh poljih."  data-inset="true" ></ul>-->
+
+            <ul id="stats" data-role="listview"></ul>
+            <br>
+            <div id="amounts">
+            <div>Znesek vseh neplačanih računov je <span id="total"></span> €</div>
+            <div>Znesek izbranih računov  <span id="filteredTotal"></span> €</div>
+            </div>
+            <br>
+            <button id="overdueBills"  data-theme="a">Samo zapadli računi</button>
+            <button id="clearBills" onclick="return confirm('Are you sure?')" data-theme="b">Pobriši vse</button>
+            <button id="save-btn">Save Text file</button>
+        </div>
+
 
 
 
@@ -72,7 +94,7 @@
             <ul>
                 <li><a href="#home" data-transition="none" data-icon="home" >Domov</a></li>
 
-                <li><a href="#addBill" data-transition="none" data-icon="plus" >Dodaj</a></li>
+                <li><a href="#addQR" data-transition="none" data-icon="plus" >QR</a></li>
 
             </ul>
         </div>
@@ -99,5 +121,45 @@
 
         </footer>
     </div><!-- /page -->
+<!-- Podstran za pregled vnosov -->
+<div data-role="page" id="addQR">
+
+
+
+
+
+    <header data-role="header" data-theme="b">
+        <h1>Punch It</h1>
+    </header>
+    <div data-role="navbar">
+        <ul>
+            <li><a href="#home" data-transition="none" data-icon="home" >Domov</a></li>
+            <li><a href="#addBill" data-transition="none" data-icon="plus" >Dodaj</a></li>
+
+        </ul>
+    </div>
+
+    <div role="main" class="ui-content">
+        <h1>jsQR Demo</h1>
+    <video id="preview"></video>
+
+
+
+
+    </div><!-- /content -->
+<!--    <script type="text/javascript">
+    scanQR();
+
+
+</script>-->
+
+    <footer data-role="footer" data-theme="b">
+        <h4>Punch It &copy; 2019</h4>
+
+
+    </footer>
+
+</div><!-- /page -->
+
 </body>
 </html>
