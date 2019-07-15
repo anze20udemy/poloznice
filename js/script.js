@@ -1,7 +1,8 @@
 
 $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo enkrat
     e.preventDefault();
-
+    $('#bills').hide();
+    $('#overdueBills').show();
 
     let localStor = localStorage.getItem('bills');
 
@@ -13,6 +14,9 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
     let jsonBills = JSON.stringify(localStor, null, 2);
     jsonBills = jsonBills.slice(1,-1).replace(/\\/g, '');
+
+    getUsername();
+    let username = localStorage.getItem('username');
 
 
 
@@ -28,27 +32,36 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
         var lines = content.split('\n');
 
-        var znesek = lines[8]
+        var znesek = lines[8];
         var namen = lines[12];
-        var rokplacila = lines[13];
+        var rokplacila = parseToMilliseconds(lines[13]);
         var iban = lines[14]
         var referenca = lines[15];
-        var prejemnik = lines[16];
+        var prejemnik = replaceChar(lines[16]);
+
 
         var QR = {
             znesek: znesek,
             namen: replaceChar(namen),
-            rokplacila: parseToMilliseconds(rokplacila),
+            rokplacila: rokplacila,
             iban: iban,
-            referenca: referenca,
+            referenca: referenca.substr(4,20), // brez SI12
             prejemnik: replaceChar(prejemnik),
+            username: username
 
         };
-        bills.push(QR)
+        bills.push(QR);
+        $.post( "../db/billsInsert.php",{ query: `INSERT INTO bills (znesek, namen, rokplacila, iban, referenca, prejemnik, username ) 
+                                VALUES ('${znesek}', '${namen}', '${rokplacila}', '${iban}', '${referenca}', '${prejemnik}', '${username}')` } )
+            .done(function( data ) {
+                alert( data );
+            });
 
-        alert(lines);
-        console.log(bills);
-        localStorage.setItem('bills', JSON.stringify(bills));
+        alert('Prejemnik: ' + prejemnik + '\n' +
+            'Znesek: ' + parseFloat(parseInt((znesek))/100).toFixed(2).toString().replace('.', ',') + ' €' + '\n' +
+            'Rok plačila:' + (new Date(rokplacila)).getUTCDate() + '.' + ((new Date(rokplacila)).getMonth()+1) + '.' + (new Date(rokplacila)).getFullYear() );
+        window.location.href = '#home';
+        location.reload();
 
 
 
@@ -58,7 +71,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
         if (cameras.length > 0) {
 
-            scanner.start(cameras[1]);
+            scanner.start(cameras[0]);
 
         } else {
 
@@ -75,10 +88,21 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
     let now = Date.now();
 
-    showBills();
+    showBillsDB();
+
+    function getUsername() {
+
+        $.ajaxSetup({cache: false})
+        $.get('../db/getsession.php', function (data) {
+            let username = data;
+            localStorage.setItem('username', username);
+
+        });
+
+    }
 
 
-    $('#importQR').on('tap',importQRData);
+    /*$('#importQR').on('tap',importQRData);*/
 
     /*$('.ui-content').on('keyup', showAmount);*/
     $('.ui-content').on('keyup', function (e) {
@@ -107,7 +131,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
                 var iban = bills[i]["iban"];
                 var referenca = bills[i]["referenca"];
                 var prejemnik = bills[i]["prejemnik"];
-                total = (parseFloat(total) + parseFloat(znesek)).toFixed(2);
+                total = ((parseFloat(total) + parseFloat(znesek)).toFixed(2)).toString().replace('.', ',');
 
 
                 if (prejemnik.toLowerCase().includes(filter.toLowerCase())) {
@@ -153,6 +177,9 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
     });
 
     $('#overdueBills').on('tap', overdueBills);
+    $('#bills').on('tap', function () {
+        window.location.href="../index.php";
+    } );
 
     // Delete handler
     $('#stats').on('tap','#deleteLink', deleteBill);
@@ -178,8 +205,9 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
         reader.onload = function () {
             var lines = reader.result.split('\n');
             var znesek = lines[8]
-            var namen = lines[12];
-            var rokplacila = lines[13];
+            var namen =lines[12];
+            var rok = lines[13];
+            var rokplacila = parseToMilliseconds(rok);
             var iban = lines[14]
             var referenca = lines[15];
             var prejemnik = lines[16];
@@ -195,6 +223,17 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
             };
 
             tempQR.push(QR);
+
+            $.post( "../db/billsInsert.php",{ query: `INSERT INTO bills (znesek, namen, rokplacila, iban, referenca, prejemnik, username ) 
+                                VALUES ('${znesek}', '${namen}', '${rokplacila}', '${iban}', '${referenca}', '${prejemnik}', '${username}')` } )
+                .done(function( data ) {
+                    alert( data );
+                    window.location.href = "index.php";
+                });
+
+            alert('Prejemnik: ' + prejemnik + '\n' +
+                'Znesek: ' + parseFloat(parseInt((znesek))/100).toFixed(2).toString().replace('.', ',') + ' €' + '\n' +
+                'Rok plačila:' + (new Date(rokplacila)).getUTCDate() + '.' + ((new Date(rokplacila)).getMonth()+1) + '.' + (new Date(rokplacila)).getFullYear() );
 
             csvObject.push(lines);
 
@@ -261,15 +300,18 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
             for (var i = 0; i < bills.length; i++) {
                 // Podatki iz array-a
-                var znesek = parseFloat(parseInt(bills[i]["znesek"])/100).toFixed(2);
+                var znesek = parseFloat(parseInt(bills[i]["znesek"])/100).toFixed(2).toString().replace('.', ',');
                 var namen = bills[i]["namen"];
-                var placilniRok = new Date(bills[i]["rokplacila"]);
+                var placilniRok = new Date(parseInt(bills[i]["rokplacila"]));
                 var rokplacila = placilniRok.getUTCDate()  + '.' + (placilniRok.getMonth()+1) + '.' + placilniRok.getFullYear();
+                var billid = bills[i]['billId'];
 
-                var iban = bills[i]["iban"];
-                var referenca = bills[i]["referenca"];
+                var ib = bills[i]["iban"];
+                var iban = ib.substring(0,4) + ' ' + ib.substring(4,8) + ' ' + ib.substring(8,12) + ' ' + ib.substring(12,16) + ' ' + ib.substring(16,20);
+                var ref = bills[i]["referenca"];
+                var referenca = ref.substring(0,4) + ' ' + ref.substring(4,17);
                 var prejemnik = bills[i]["prejemnik"];
-                total = (parseFloat(total) + parseFloat(znesek)).toFixed(2);
+                total = (parseFloat(total) + parseFloat(znesek)).toFixed(2).toString().replace('.', ',');
 
                 $('#stats').append(
                     `<li class="ui-body-inherit ui-li-static">
@@ -282,7 +324,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
                     <br>
                     <div class="controls"> 
                         
-                        <a href="#" id="deleteLink"  data-referenca='${referenca}' data-znesek='${znesek}' >Odstrani</a>
+                        <a href="#" id="deleteLink" data-billid='${billid}' data-referenca='${referenca}' data-znesek='${znesek}' >Odstrani</a>
                      </div>
  
                     </li>`);
@@ -301,11 +343,48 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
         }
 
 
+
+    }
+    function showBillsDB() {
+        $.ajax({
+
+            url : '../db/billsView.php', // my php file
+            type : 'GET', // type of the HTTP request
+            dataType: 'json',
+
+            success : function(data){
+                localStorage.setItem('bills', JSON.stringify(data));
+                showBills(); /// prikaz vseh vpisov v podstrani #statistics
+
+
+            }
+        });
+
     }
     function clearBills() {
-        localStorage.removeItem('bills')
 
-        $('#allBills').html('<div>V bazi trenutno ni nobenega računa.</div>');
+
+        let username = localStorage.getItem('username');
+        var result =window.confirm('Ali ste prepričani?');
+        if (result == true) {
+            var confirm =window.confirm('To dejanje bo zbrisalo vse vnose v bazi!');
+
+            if (confirm == true) {
+
+                localStorage.removeItem('bills');
+
+                $.post( "../db/billsDeleteAll.php",{ query: "DELETE FROM bills  WHERE username='" + username + "'"  } )
+                    .done(function( data ) {
+                        alert( data );
+
+                    });
+                $('#stats').html('<p>Trenutno nimate vnosov</p>');
+            } else {
+                window.location.href = "#home";
+            }
+        } else {
+            window.location.href = "#home";
+        }
     }
 
     // Brisanje posameznega vnosa
@@ -318,6 +397,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
             localStorage.setItem('currentZnesek', $(this).data('znesek'));
             localStorage.setItem('currentReferenca', $(this).data('referenca'));
+            localStorage.setItem('currentBillId', $(this).data('billid'));
 
 
 
@@ -325,31 +405,39 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
             var currentZnesek = localStorage.getItem('currentZnesek');
             var currentReferenca = localStorage.getItem('currentReferenca');
+            var currentBillId = localStorage.getItem('currentBillId');
+
 
 
 
             var bills = getBillsObject();
 
-            // Loop through punches
+/*            // Loop through punches
             for (var i = 0; i < bills.length; i++) {
                 if (bills[i].referenca === currentReferenca) {
                     bills.splice(i,1);
                 }
                 localStorage.setItem('bills', JSON.stringify(bills));
-            }
+            }*/
+            $.post( "../db/billsDelete.php",{ query: "DELETE FROM bills WHERE billId="+currentBillId} )
+                .done(function( data ) {
+                    alert( data );
+                    location.reload();
+                });
 
-            alert('Vnos je bil odstranjen');
+
+            // alert('Vnos je bil odstranjen');
 
 
             // Redirect
 
-            location.reload();
+            // location.reload();
 
             return false;
 
 
         } else {
-            window.location.href = "index.html";
+            window.location.href = "index.php";
             location.reload();
         }
 
@@ -360,6 +448,8 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
         // get bills object
         $('#stats').html(''); // Pobrišemo seznam računov
         $('#total').html(''); // Pobrišemo znesek vseh neplačanih računov
+        $('#overdueBills').hide();
+        $('#bills').show();
         $('input[name=filterBills]').val(''); // Pobrišemo vrednost input field-a
         var bills = getBillsObject();
         var totalBills = document.getElementById("total");
@@ -388,7 +478,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
                 }
 
 
-                if (now > placilniRok) {
+                // if (now > placilniRok) {
                     $('#stats').append(
                         `<li class="ui-body-inherit ui-li-static">
 
@@ -400,7 +490,8 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
                    
               
                     </li>`);
-                }
+                // }
+                console.log(placilniRok);
                 }
 
 
@@ -419,7 +510,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
     }
 
     
-    // Uvoz txt datoteke s podatki iz skenirane položnice
+    /*// Uvoz txt datoteke s podatki iz skenirane položnice
     function importQRData() {
         var currentBill = JSON.parse(localStorage.getItem('tempQR'));
         var znesek = currentBill[0]['znesek'];
@@ -449,26 +540,30 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
 
         // Set stringified object to local storage
         localStorage.setItem('bills', JSON.stringify(bills));
-        window.location.href = "index.html";
+        window.location.href = "index.php";
 
         return false;
 
-    }
+    }*/
     // Ročno dodan račun brez QR-ja
     function addBill() {
         var currentBill = JSON.parse(localStorage.getItem('tempQR'));
-        var znesek = $('#znesek').val();
-        var rokplacila = $('#rokplacila').val();
+        var znesek = ($('#znesek').val()).toString().replace(',', '.')*100; // najprej spremenimo decimalno vejico v piko, zaradi oblikovanja števil
+        // var znesek = znesekStr *100;
+        var rokplacila = parseToMilliseconds($('#rokplacila').val());
         var prejemnik = $('#prejemnik').val();
+        var namen = prejemnik;
+        var iban = 'SI56123456789012345';
+        var referenca = '';
 
         // Create 'bill' object
 
         var bill = {
-            znesek: znesek*100,
-            namen: '                   ',
-            rokplacila: parseToMilliseconds(rokplacila),
-            iban: 'SI56123456789012345',
-            referenca: '',
+            znesek: znesek,
+            namen: namen,
+            rokplacila: rokplacila,
+            iban: iban,
+            referenca: referenca,
             prejemnik: prejemnik,
 
         };
@@ -476,13 +571,19 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
         var bills = getBillsObject();
 
         bills.push(bill);
+        $.post( "../db/billsInsert.php",{ query: `INSERT INTO bills (znesek, namen, rokplacila, iban, referenca, prejemnik, username ) 
+                                VALUES ('${znesek}', '${namen}', '${rokplacila}', '${iban}', '${referenca}', '${prejemnik}', '${username}')` } )
+            .done(function( data ) {
+                alert( "Data Loaded: " + data );
+            });
 
         alert('račun je bil dodan');
 
         // Set stringified object to local storage
         localStorage.setItem('bills', JSON.stringify(bills));
 
-        window.location.href = "index.html";
+        window.location.href = '#home';
+        location.reload();
 
         return false;
 
@@ -629,9 +730,7 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
     }
     // Funkcija, ki prebere backup JSON datoteko, če je localstorage prazen
     function readJson() {
-/*      $.getJSON('../backup.json', function (data) {
-          console.log(data);
-      });*/
+
         $.ajax({
             url:'../backup.json',
             dataType: 'json',
@@ -639,37 +738,24 @@ $(document).one('pageinit', function (e) { // zato damo one, da se naloži samo 
             cache: false,
             success: function (data) {
                 localStorage.setItem('bills', JSON.stringify(data));
-                /*let jsonBills = JSON.stringify(data, null, 2);
-                console.log(jsonBills);*/
+
             }
         })
     }
 
-
     function setCurrent () {
         // Set localstorage items
-        localStorage.setItem('currentId', $(this).data('id'));
+        localStorage.setItem('currentId', $(this).data('billId'));
         localStorage.setItem('currentZnesek', $(this).data('znesek'));
         localStorage.setItem('currentReferenca', $(this).data('referenca'));
-
 
 
         // Insert form fields
         var localRefeneca = localStorage.getItem('currentReferenca');
         var localZnesek = localStorage.getItem('currentZnesek');
+        //var localZnesek = localStorage.getItem('currentZnesek');
 
-
-
-
-        /*$('#editDesc').val(localDesc);
-        $('#editPunchIn').val(localPunchInMs);
-        $('#editPunchOut').val(localPunchOutMs);*/
 
     }
-
-
-
-
-
 
 });

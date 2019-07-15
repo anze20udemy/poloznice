@@ -1,3 +1,17 @@
+<!--
+<?php
+session_start();
+
+if(!isset($_SESSION["username"])){
+  header("location: ../login/login.php");
+  exit;
+}
+$username = $_SESSION['username'];
+?>
+
+
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,7 +19,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
 
-    <title>Pretvornik</title>
+    <title>Poloznice</title>
     <link rel="stylesheet" href="css/jquery.mobile-1.4.5.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="js/jquery.js"></script>
@@ -32,9 +46,13 @@
     </header>
     <div data-role="navbar">
         <ul>
-
+            <li><a href="#home" data-transition="none" data-icon="home" >Domov</a></li>
             <li><a href="#addBill" data-transition="none" data-icon="plus" >Dodaj</a></li>
             <li><a href="#addQR" data-transition="none" data-icon="plus" >QR</a></li>
+          <?php  if (isset($_SESSION['username'])) : ?>
+
+              <li><a href="login/logout.php" data-transition="none" data-icon="home"><?php echo $username ?></a></li>
+          <?php endif ?>
 
         </ul>
     </div>
@@ -46,7 +64,7 @@
         <p>Uvoz txt datoteke.</p>
 
         <input type="file">
-        <button id="importQR">Uvozi QR</button>
+        <!--<button id="importQR">Uvozi QR</button>-->
 
         <div id="allBills">
             <h3>Vsi računi</h3>
@@ -66,8 +84,9 @@
             </div>
             <br>
             <button id="overdueBills"  data-theme="a">Samo zapadli računi</button>
+            <button id="bills"  data-theme="a">Vsi računi</button>
             <button id="clearBills" onclick="return confirm('Are you sure?')" data-theme="b">Pobriši vse</button>
-            <button id="save-btn">Save Text file</button>
+            <button id="save-btn">Ustvari backup.json datoteko</button>
         </div>
 
 
@@ -88,7 +107,7 @@
     <div data-role="page" id="addBill">
 
         <header data-role="header" data-theme="b">
-            <h1>Punch It</h1>
+            <h1>Poloznice 2019</h1>
         </header>
         <div data-role="navbar">
             <ul>
@@ -116,7 +135,7 @@
         </div><!-- /content -->
 
         <footer data-role="footer" data-theme="b">
-            <h4>Punch It &copy; 2019</h4>
+            <h4>Položnice &copy; 2019</h4>
 
 
         </footer>
@@ -129,7 +148,7 @@
 
 
     <header data-role="header" data-theme="b">
-        <h1>Punch It</h1>
+        <h1>Položnice</h1>
     </header>
     <div data-role="navbar">
         <ul>
@@ -140,8 +159,8 @@
     </div>
 
     <div role="main" class="ui-content">
-        <h1>jsQR Demo</h1>
-    <video id="preview"></video>
+        <h1>Skeniraj kodo</h1>
+    <video width="400px" id="preview"></video>
 
 
 
@@ -154,7 +173,7 @@
 </script>-->
 
     <footer data-role="footer" data-theme="b">
-        <h4>Punch It &copy; 2019</h4>
+        <h4>Položnice &copy; 2019</h4>
 
 
     </footer>

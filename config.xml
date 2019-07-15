@@ -10,10 +10,10 @@
     <name>poloznice</name>
 
     <description>
-        Preprosta aplikacija za budget.
+        Preprosta aplikacija za spremljanje računov.
     </description>
 
-    <author href="https://build.phonegap.com" email="support@phonegap.com">
+    <author href="#" email="anze20@hotmail.com">
         Anže Šuštar
     </author>
     <icon src="icon.png"/>
